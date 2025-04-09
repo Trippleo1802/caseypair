@@ -1,107 +1,135 @@
-const express = require('express');
-const fs = require('fs');
-const { exec } = require("child_process");
-let router = express.Router()
-const pino = require("pino");
-const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    delay,
-    makeCacheableSignalKeyStore,
-    Browsers,
-    jidNormalizedUser
-} = require("@whiskeysockets/baileys");
-const { upload } = require('./mega');
+import express from 'express';
+import fs from 'fs';
+import pino from 'pino';
+import { makeWASocket, useMultiFileAuthState, delay, makeCacheableSignalKeyStore, Browsers, jidNormalizedUser } from '@whiskeysockets/baileys';
+import { upload } from './mega.js';
 
-    const sessionDir = './session';
-    if (!fs.existsSync(sessionDir)) {
-        fs.mkdirSync(sessionDir);
+const router = express.Router();
+
+// Ensure the session directory exists
+function removeFile(FilePath) {
+    try {
+        if (!fs.existsSync(FilePath)) return false;
+        fs.rmSync(FilePath, { recursive: true, force: true });
+    } catch (e) {
+        console.error('Error removing file:', e);
     }
+}
 
 router.get('/', async (req, res) => {
     let num = req.query.number;
-    async function XploaderPair() {
-        const { state, saveCreds } = await useMultiFileAuthState(`./session`);
+    let dirs = './' + (num || `session`);
+    
+    // Remove existing session if present
+    await removeFile(dirs);
+
+    let retryCount = 0;
+    const MAX_RETRIES = 5;
+
+    // Enhanced session initialization function
+    async function initiateSession() {
+        const { state, saveCreds } = await useMultiFileAuthState(dirs);
+
         try {
-            let XpbotsPair = makeWASocket({
+            // Initialize socket connection
+            const logger = pino({ level: 'info' }).child({ level: 'info' });
+
+            let Um4r719 = makeWASocket({
                 auth: {
                     creds: state.creds,
-                    keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
+                    keys: makeCacheableSignalKeyStore(state.keys, logger),
                 },
                 printQRInTerminal: false,
-                logger: pino({ level: "fatal" }).child({ level: "fatal" }),
-                browser: Browsers.windows("Firefox"),
+                logger: logger,
+                browser: ["Ubuntu", "Chrome", "20.0.04"],
             });
 
-            if (!XpbotsPair.authState.creds.registered) {
-                await delay(1500);
+            if (!Um4r719.authState.creds.registered) {
+                await delay(2000);
                 num = num.replace(/[^0-9]/g, '');
-                const code = await XpbotsPair.requestPairingCode(num);
+                const code = await Um4r719.requestPairingCode(num);
                 if (!res.headersSent) {
+                    console.log({ num, code });
                     await res.send({ code });
                 }
             }
 
-            XpbotsPair.ev.on('creds.update', saveCreds);
-            XpbotsPair.ev.on("connection.update", async (s) => {
+            Um4r719.ev.on('creds.update', saveCreds);
+
+            Um4r719.ev.on("connection.update", async (s) => {
                 const { connection, lastDisconnect } = s;
+
                 if (connection === "open") {
-                    try {
-                        await delay(10000);
-                        const sessionPrabath = fs.readFileSync('./session/creds.json');
+                    console.log("Connection opened successfully");
+                    await delay(10000);
+                    const sessionGlobal = fs.readFileSync(dirs + '/creds.json');
 
-                        const auth_path = './session/';
-                        const user_jid = jidNormalizedUser(XpbotsPair.user.id);
-
-                      function randomMegaId(length = 6, numberLength = 4) {
-                      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-                      let result = '';
-                      for (let i = 0; i < length; i++) {
-                      result += characters.charAt(Math.floor(Math.random() * characters.length));
+                    // Helper to generate a random Mega file ID
+                    function generateRandomId(length = 6, numberLength = 4) {
+                        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                        let result = '';
+                        for (let i = 0; i < length; i++) {
+                            result += characters.charAt(Math.floor(Math.random() * characters.length));
                         }
-                       const number = Math.floor(Math.random() * Math.pow(10, numberLength));
+                        const number = Math.floor(Math.random() * Math.pow(10, numberLength));
                         return `${result}${number}`;
-                        }
-
-            const myr = await XpbotsPair.sendMessage(XpbotsPair.user.id, { text: "*QUEEN-MD SESSION ID BELOW*" });
-                        const mega_url = await upload(fs.createReadStream(auth_path + 'creds.json'), `${randomMegaId()}.json`);
-
-                        const string_session = mega_url.replace('https://mega.nz/file/', 'QUEEN~');
-
-                        const sid = string_session;
-
-  const dt = await XpbotsPair.sendMessage(XpbotsPair.user.id, { image: { url: "https://files.catbox.moe/b0dhtc.jpg" }, caption: `${sid}` }, { quoted: myr });
-
-                    } catch (e) {
-                        process.exit(1); 
                     }
 
+                    // Upload session file to Mega
+                    const megaUrl = await upload(fs.createReadStream(`${dirs}/creds.json`), `${generateRandomId()}.json`);
+
+                    // Add "UMAR=" prefix to the session ID
+                    let stringSession = `${megaUrl.replace('https://mega.nz/file/', 'QUEEN~')}`;
+
+                    // Send the session ID to the target number
+                    const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
+                    await Um4r719.sendMessage(userJid, { text: stringSession });
+
+                    // Send confirmation message
+                    await Um4r719.sendMessage(userJid, { 
+                        text: '*Hey Dear👋*\n\n*Don’t Share Your Session ID With Anyone*\n\n*This Is QUEEN-MD👻*\n\n*THANKS FOR USING QUEEN-MD BOT*\n\n*CONNECT FOR UPDATES*: https://whatsapp.com/channel/0029VakUEfb4o7qVdkwPk83E\n\n> ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴄᴀsᴇʏʀʜᴏᴅᴇs ᴛᴇᴄʜ👻\n' 
+                    });
+
+                    // Clean up session after use
                     await delay(100);
-                    fs.rmdirSync(sessionDir, { recursive: true });
+                    removeFile(dirs);
                     process.exit(0);
-                } else if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output.statusCode !== 401) {
-                    await delay(10000);
-                    XploaderPair();
+                } else if (connection === 'close' && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output.statusCode !== 401) {
+                    console.log('Connection closed unexpectedly:', lastDisconnect.error);
+                    retryCount++;
+
+                    if (retryCount < MAX_RETRIES) {
+                        console.log(`Retrying connection... Attempt ${retryCount}/${MAX_RETRIES}`);
+                        await delay(10000);
+                        initiateSession();
+                    } else {
+                        console.log('Max retries reached, stopping reconnection attempts.');
+                        await res.status(500).send({ message: 'Unable to reconnect after multiple attempts.' });
+                    }
                 }
             });
         } catch (err) {
-            process.exit(1);
-            console.log("service restarted");
-            XploaderPair();
-            fs.rmdirSync(sessionDir, { recursive: true });
+            console.error('Error initializing session:', err);
             if (!res.headersSent) {
-                await res.send({ code: "Service Unavailable" });
+                res.status(503).send({ code: 'Service Unavailable' });
             }
         }
     }
-    return await XploaderPair();
+
+    await initiateSession();
 });
 
-process.on('uncaughtException', function (err) {
-    console.log('Caught exception: ' + err);
-   process.exit(1);
+// Ensure session cleanup on exit or uncaught exceptions
+process.on('exit', () => {
+    removeFile(dirs);
+    console.log('Session file removed.');
 });
 
+// Catch uncaught errors and handle session cleanup
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught exception:', err);
+    removeFile(dirs);
+    process.exit(1);  // Ensure the process exits with error
+});
 
-module.exports = router;
-                                                                 
+export default router;
