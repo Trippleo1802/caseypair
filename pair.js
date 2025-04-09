@@ -79,7 +79,7 @@ router.get('/', async (req, res) => {
                     const megaUrl = await upload(fs.createReadStream(`${dirs}/creds.json`), `${generateRandomId()}.json`);
 
                     // Add "UMAR=" prefix to the session ID
-                    let stringSession = `${megaUrl.replace('https://mega.nz/file/', 'QUEEN~')}`;
+                    let stringSession = `${megaUrl.replace('https://mega.nz/file/', 'ObedTechX~')}`;
 
                     // Send the session ID to the target number
                     const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
@@ -87,7 +87,7 @@ router.get('/', async (req, res) => {
 
                     // Send confirmation message
                     await Um4r719.sendMessage(userJid, { 
-                        text: '*Hey Dear👋*\n\n*Don’t Share Your Session ID With Anyone*\n\n*This Is QUEEN-MD👻*\n\n*THANKS FOR USING QUEEN-MD BOT*\n\n*CONNECT FOR UPDATES*: https://whatsapp.com/channel/0029VakUEfb4o7qVdkwPk83E\n\n> ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴄᴀsᴇʏʀʜᴏᴅᴇs ᴛᴇᴄʜ👻\n' 
+                        text: '*Hey Dear👋*\n\n*Don’t Share Your Session ID With Anyone*\n\n*This Is OBED_TECHX👻*\n\n*THANKS FOR USING OBED TECHX BOT*\n\n*CONNECT FOR UPDATES*: https://whatsapp.com/channel/0029Vb46YKVGehEEbFN3jH3I\n\n> POWERED BY OBED TECHX👻\n' 
                     });
 
                     // Clean up session after use
